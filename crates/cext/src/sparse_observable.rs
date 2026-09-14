@@ -1166,12 +1166,13 @@ pub extern "C" fn qk_bitterm_label(bit_term: BitTerm) -> u8 {
 #[cfg(feature = "python_binding")]
 mod py {
     use crate::pointers::mut_ptr_as_ref;
-    use pyo3::exceptions::PyRuntimeError;
     use pyo3::prelude::*;
+    use pyo3::{exceptions::PyRuntimeError, ffi::PyObject};
     use qiskit_quantum_info::sparse_observable::{PySparseObservable, SparseObservable};
+    use std::ffi::{c_int, c_void};
     use std::sync;
 
-    fn try_project_inner_observable<'a>(
+    fn try_project_inner_observable_mut<'a>(
         _py: Python<'_>,
         py_obs: &'a mut PySparseObservable,
     ) -> PyResult<&'a mut SparseObservable> {
@@ -1235,13 +1236,15 @@ mod py {
     /// The caller must be attached to a Python interpreter.  Behavior is undefined if `ob` is
     /// not a valid non-null pointer to a Python object.
     #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn qk_obs_borrow_from_python(
-        ob: *mut pyo3::ffi::PyObject,
-    ) -> *mut SparseObservable {
+    pub unsafe extern "C" fn qk_obs_borrow_from_python(ob: *mut PyObject) -> *mut SparseObservable {
         // SAFETY: per documentation, we are attached to a Python interpreter, and `ob` is a valid
         // pointer to a PyObject.
         unsafe {
-            crate::py::borrow_map_mut(Python::assume_attached(), ob, try_project_inner_observable)
+            crate::py::borrow_map_mut(
+                Python::assume_attached(),
+                ob,
+                try_project_inner_observable_mut,
+            )
         }
     }
 
@@ -1279,10 +1282,56 @@ mod py {
                 Python::assume_attached(),
                 object,
                 address,
-                try_project_inner_observable,
+                try_project_inner_observable_mut,
             )
         }
     }
+
+    // TODO:
+    // - named error variants
+    // - non-blocking try_read and try_write variants
+    // - can we make this generic somehow?
+
+    #[allow(clippy::missing_safety_doc)]
+    pub unsafe extern "C" fn qk_obs_python_read(
+        obs: *mut PyObject,
+        read_fn: unsafe extern "C" fn(*const SparseObservable, data: *mut c_void),
+        data: *mut c_void,
+    ) -> c_int {
+        let obs = unsafe {
+            let py = Python::assume_attached();
+            Borrowed::from_ptr(py, obs)
+                .cast::<PySparseObservable>()
+                .unwrap_unchecked()
+        };
+
+        let obs = &obs.borrow();
+        todo!()
+    }
+
+    #[allow(clippy::missing_safety_doc)]
+    pub unsafe extern "C" fn qk_obs_python_write(
+        obs: *mut PyObject,
+        write_fn: unsafe extern "C" fn(*mut SparseObservable, data: *mut c_void),
+        data: *mut c_void,
+    ) -> c_int {
+        let obs = unsafe {
+            let py = Python::assume_attached();
+            Borrowed::from_ptr(py, obs)
+                .cast::<PySparseObservable>()
+                .unwrap_unchecked()
+        };
+
+        let obs = obs.borrow_mut();
+        let mut obs = obs.inner.write().unwrap();
+
+        unsafe {
+            write_fn(&mut *obs, data);
+        }
+
+        1
+    }
 }
+
 #[cfg(feature = "python_binding")]
 pub use py::*;
