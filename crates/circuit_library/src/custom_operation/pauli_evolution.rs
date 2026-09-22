@@ -10,22 +10,26 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use std::sync::Arc;
+use std::{error, sync::Arc};
 
+use ndarray::Array2;
+use num_complex::Complex64;
 use qiskit_circuit::{
     operations::{CustomOperation, Operation, Param},
     packed_instruction::PackedOperation,
 };
-use qiskit_quantum_info::sparse_observable::SparseObservable;
+use qiskit_quantum_info::sparse_observable::{BitTerm, MatrixError, SparseObservable};
 use smallvec::SmallVec;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum PauliEvolutionError {
     #[error("time is python object")]
-    TimeIsPython,
+    TimePython,
     #[error("operator has 0 qubits")]
-    Zero,
+    OperatorZeroQubits,
+    #[error("matrix error")]
+    Matrix(#[from] MatrixError),
 }
 
 /// Time-evolution of a hermitian operator.
@@ -46,9 +50,9 @@ impl PauliEvolution {
     /// Returns an error if `time` is [`Param::Obj`] or `operator` has 0 qubits.
     pub fn new(operator: SparseObservable, time: Param) -> Result<Self, PauliEvolutionError> {
         if matches!(time, Param::Obj(_)) {
-            Err(PauliEvolutionError::TimeIsPython)
+            Err(PauliEvolutionError::TimePython)
         } else if operator.num_qubits() == 0 {
-            Err(PauliEvolutionError::Zero)
+            Err(PauliEvolutionError::OperatorZeroQubits)
         } else {
             Ok(Self {
                 operator,
@@ -119,6 +123,42 @@ impl CustomOperation for PauliEvolution {
         let inverse = PackedOperation::from_custom_operation(Box::new(inverse));
         Some((inverse, SmallVec::new()))
     }
+
+    fn matrix(
+        &self,
+        _params: &[Param],
+    ) -> Result<Option<Array2<Complex64>>, Box<dyn error::Error + 'static>> {
+        let operator = &self.operator;
+
+        let matrix = if let Param::Float(time) = self.time()
+            && is_pauli(operator)
+        {
+            let mut matrix = operator.to_matrix().map_err(PauliEvolutionError::from)?;
+            evolve_matrix_pauli(&mut matrix, *time);
+            Some(matrix)
+        } else {
+            None
+        };
+
+        Ok(matrix)
+    }
+}
+
+fn is_pauli(operator: &SparseObservable) -> bool {
+    operator
+        .bit_terms()
+        .iter()
+        .all(|bit_term| matches!(bit_term, BitTerm::X | BitTerm::Y | BitTerm::Z))
+}
+
+fn evolve_matrix_pauli(matrix: &mut Array2<Complex64>, time: f64) {
+    let sin_time = Complex64::new(0.0, -time.sin());
+    matrix.mapv_inplace(|element| element * sin_time);
+
+    let cos_time = Complex64::new(time.cos(), 0.0);
+    for element in matrix.diag_mut() {
+        *element += cos_time;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -156,7 +196,7 @@ mod tests {
     fn test_zero_qubits() {
         let obs = SparseObservable::new(0, vec![], vec![], vec![], vec![0]).expect("is coherent");
         let res = PauliEvolution::new(obs, Param::Float(3.0));
-        assert!(matches!(res, Err(PauliEvolutionError::Zero)))
+        assert!(matches!(res, Err(PauliEvolutionError::OperatorZeroQubits)))
     }
 
     #[test]
