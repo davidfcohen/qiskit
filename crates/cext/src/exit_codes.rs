@@ -32,8 +32,6 @@ pub enum CInputError {
 pub enum ExitCode {
     /// Success.
     Success = 0,
-    /// Unknown,
-    Unknown = 1,
     /// Error related to data input.
     CInputError = 100,
     /// Unexpected null pointer.
@@ -133,7 +131,7 @@ impl From<CircuitDataError> for ExitCode {
     fn from(error: CircuitDataError) -> Self {
         match error {
             CircuitDataError::ParameterTableError(error) => error.into(),
-            _ => ExitCode::Unknown,
+            _ => ExitCode::ParameterError,
         }
     }
 }
