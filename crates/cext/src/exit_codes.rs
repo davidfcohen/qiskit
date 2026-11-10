@@ -10,7 +10,9 @@
 // copyright notice, and modified files need to carry a notice indicating
 // that they have been altered from the originals.
 
-use qiskit_circuit::parameter::parameter_expression::ParameterError;
+use qiskit_circuit::{
+    circuit_data::CircuitDataError, parameter::parameter_expression::ParameterError,
+};
 use qiskit_quantum_info::sparse_observable::ArithmeticError;
 use qiskit_transpiler::target::TargetError;
 use thiserror::Error;
@@ -32,6 +34,8 @@ pub enum CInputError {
 pub enum ExitCode {
     /// Success.
     Success = 0,
+    /// Unknown,
+    Unknown = 1,
     /// Error related to data input.
     CInputError = 100,
     /// Unexpected null pointer.
@@ -127,8 +131,20 @@ impl From<TargetError> for ExitCode {
     }
 }
 
+impl From<CircuitDataError> for ExitCode {
+    fn from(error: CircuitDataError) -> Self {
+        match error {
+            CircuitDataError::ParameterError(error) => error.into(),
+            _ => ExitCode::Unknown,
+        }
+    }
+}
+
 impl From<ParameterError> for ExitCode {
-    fn from(_value: ParameterError) -> Self {
-        ExitCode::ArithmeticError
+    fn from(error: ParameterError) -> Self {
+        match error {
+            ParameterError::NameConflict => ExitCode::ParameterNameConflict,
+            _ => ExitCode::ParameterError,
+        }
     }
 }

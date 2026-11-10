@@ -825,12 +825,10 @@ pub unsafe extern "C" fn qk_circuit_set_global_phase(
     let circuit = unsafe { &mut *circuit };
     let phase = unsafe { &*phase };
 
-    match circuit.set_global_phase_param(phase.clone()) {
-        Ok(()) => ExitCode::Success,
-        Err(CircuitDataError::ParameterTableError(ParameterTableError::NameConflict(_))) => {
-            ExitCode::ParameterNameConflict
-        }
-        Err(_) => ExitCode::ParameterError,
+    if let Err(error) = circuit.set_global_phase_param(phase.clone()) {
+        error.into()
+    } else {
+        ExitCode::Success
     }
 }
 
@@ -2933,28 +2931,18 @@ unsafe fn append_box(
         num_clbits: num_clbits as u32,
     });
 
-    let ret = circuit.push_packed_operation(
-        box_op,
-        Some(Parameters::Blocks(vec![box_block])),
-        qargs,
-        cargs,
-    );
-    // The body's parameters may clash by name with the outer circuit's, so this can fail.
-    match ret {
-        Ok(()) => {}
-        Err(CircuitDataError::ParameterTableError(ParameterTableError::NameConflict(_))) => {
-            return ExitCode::ParameterNameConflict;
-        }
-        Err(_) => return ExitCode::ParameterError,
-    }
+    let params = Some(Parameters::Blocks(vec![box_block]));
 
-    if !out_inst_idx.is_null() {
-        // SAFETY: Per documentation, if non-null, out_inst_idx is a valid, aligned pointer to a size_t.
-        unsafe {
-            *out_inst_idx = circuit.data().len() - 1;
+    if let Err(error) = circuit.push_packed_operation(box_op, params, qargs, cargs) {
+        circuit.decrement_block(box_block);
+        error.into()
+    } else {
+        if !out_inst_idx.is_null() {
+            // SAFETY: `out_isnt_idx` is non-null in this block.
+            unsafe { *out_inst_idx = circuit.data().len() - 1 };
         }
+        ExitCode::Success
     }
-    ExitCode::Success
 }
 
 /// The configuration options for the ``qk_circuit_draw`` function.
