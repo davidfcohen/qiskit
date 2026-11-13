@@ -2714,8 +2714,8 @@ pub unsafe extern "C" fn qk_circuit_delay_unit(
 ///
 /// This function takes ownership of ``body``. The caller must not use or free ``body`` afterwards.
 ///
-/// @param circuit A non-null pointer to the circuit to append the box to.
-/// @param body A non-null pointer to the circuit to use as the body of the box.
+/// @param circuit A pointer to the circuit to append the box to.
+/// @param body A pointer to the circuit to use as the body of the box.
 /// @param qubits A pointer to an array of ``uint32_t`` qubit indices in ``circuit``, of length
 ///     ``qk_circuit_num_qubits(body)``, mapping the body's qubits onto ``circuit``'s qubits.
 /// @param clbits A pointer to an array of ``uint32_t`` clbit indices in ``circuit``, of length
@@ -2744,14 +2744,14 @@ pub unsafe extern "C" fn qk_circuit_delay_unit(
 ///
 /// # Safety
 ///
+/// Behavior is undefined if ``circuit`` or ``body`` is not a valid, non-null pointer to a
+/// ``QkCircuit``, or if ``body`` is not owned by the caller.
+///
 /// ``qubits`` and ``clbits`` must be arrays of ``uint32_t`` of length
 /// ``qk_circuit_num_qubits(body)`` and ``qk_circuit_num_clbits(body)`` respectively, containing
 /// valid qubit/clbit indices into ``circuit``. Behavior is undefined otherwise.
 ///
 /// If not null, ``out_inst_idx`` must be a valid, aligned pointer to a ``size_t``.
-///
-/// Behavior is undefined if ``circuit`` or ``body`` is not a valid, non-null pointer to a
-/// ``QkCircuit``, or if ``body`` is not owned by the caller.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn qk_circuit_box(
     circuit: *mut CircuitData,
@@ -2771,14 +2771,14 @@ pub unsafe extern "C" fn qk_circuit_box(
 ///
 /// This function takes ownership of ``body``. The caller must not use or free ``body`` afterwards.
 ///
-/// @param circuit A non-null pointer to the circuit to append the box to.
-/// @param body A non-null pointer to the circuit to use as the body of the box.
+/// @param circuit A pointer to the circuit to append the box to.
+/// @param body A pointer to the circuit to use as the body of the box.
 /// @param qubits A pointer to an array of ``uint32_t`` qubit indices in ``circuit``, of length
 ///     ``qk_circuit_num_qubits(body)``, mapping the body's qubits onto ``circuit``'s qubits.
 /// @param clbits A pointer to an array of ``uint32_t`` clbit indices in ``circuit``, of length
 ///     ``qk_circuit_num_clbits(body)``, mapping the body's clbits onto ``circuit``'s clbits. This
 ///     can be a null pointer if ``body`` has no clbits.
-/// @param duration A non-null pointer to the ``QkDurationInfo`` describing the duration of the box.
+/// @param duration A pointer to the ``QkDurationInfo`` describing the duration of the box.
 /// @param out_inst_idx A pointer to a ``size_t`` to write the index of the box in ``circuit`` to,
 ///     or ``NULL`` if it is not needed.
 ///
@@ -2803,15 +2803,17 @@ pub unsafe extern "C" fn qk_circuit_box(
 ///
 /// # Safety
 ///
+/// Behavior is undefined if ``circuit`` or ``body`` is not a valid, non-null pointer to a
+/// ``QkCircuit``, or if ``body`` is not owned by the caller.
+///
 /// ``qubits`` and ``clbits`` must be arrays of ``uint32_t`` of length
 /// ``qk_circuit_num_qubits(body)`` and ``qk_circuit_num_clbits(body)`` respectively, containing
 /// valid qubit/clbit indices into ``circuit``. Behavior is undefined otherwise.
 ///
-/// If not null, ``out_inst_idx`` must be a valid, aligned pointer to a ``size_t``.
+/// ``duration`` must be a valid, non-null pointer to a ``QkDurationInfo``.
+/// Behavior is undefined otherwise.
 ///
-/// Behavior is undefined if ``circuit`` or ``body`` is not a valid, non-null pointer to a
-/// ``QkCircuit``, if ``body`` is not owned by the caller, or if ``duration`` is not a valid,
-/// non-null pointer to a ``QkDurationInfo``.
+/// If not null, ``out_inst_idx`` must be a valid, aligned pointer to a ``size_t``.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn qk_circuit_box_duration_info(
     circuit: *mut CircuitData,
@@ -2837,14 +2839,14 @@ pub unsafe extern "C" fn qk_circuit_box_duration_info(
 /// This function takes ownership of ``body``. The caller must not use or free ``body`` afterwards.
 /// The ``duration`` expression is copied, so the caller keeps ownership of it.
 ///
-/// @param circuit A non-null pointer to the circuit to append the box to.
-/// @param body A non-null pointer to the circuit to use as the body of the box.
+/// @param circuit A pointer to the circuit to append the box to.
+/// @param body A pointer to the circuit to use as the body of the box.
 /// @param qubits A pointer to an array of ``uint32_t`` qubit indices in ``circuit``, of length
 ///     ``qk_circuit_num_qubits(body)``, mapping the body's qubits onto ``circuit``'s qubits.
 /// @param clbits A pointer to an array of ``uint32_t`` clbit indices in ``circuit``, of length
 ///     ``qk_circuit_num_clbits(body)``, mapping the body's clbits onto ``circuit``'s clbits. This
 ///     can be a null pointer if ``body`` has no clbits.
-/// @param duration A non-null pointer to the ``QkExprNode`` defining the duration of the box.
+/// @param duration A pointer to the ``QkExprNode`` defining the duration of the box.
 /// @param out_inst_idx A pointer to a ``size_t`` to write the index of the box in ``circuit`` to,
 ///     or ``NULL`` if it is not needed.
 ///
@@ -2871,15 +2873,17 @@ pub unsafe extern "C" fn qk_circuit_box_duration_info(
 ///
 /// # Safety
 ///
+/// Behavior is undefined if ``circuit`` or ``body`` is not a valid, non-null pointer to a
+/// ``QkCircuit``, or if ``body`` is not owned by the caller.
+///
 /// ``qubits`` and ``clbits`` must be arrays of ``uint32_t`` of length
 /// ``qk_circuit_num_qubits(body)`` and ``qk_circuit_num_clbits(body)`` respectively, containing
 /// valid qubit/clbit indices into ``circuit``. Behavior is undefined otherwise.
 ///
-/// If not null, ``out_inst_idx`` must be a valid, aligned pointer to a ``size_t``.
+/// ``duration`` must be a valid, non-null pointer to a ``QkExprNode``.
+/// Behavior is undefined otherwise.
 ///
-/// Behavior is undefined if ``circuit`` or ``body`` is not a valid, non-null pointer to a
-/// ``QkCircuit``, if ``body`` is not owned by the caller, or if ``duration`` is not a valid,
-/// non-null pointer to a ``QkExprNode``.
+/// If not null, ``out_inst_idx`` must be a valid, aligned pointer to a ``size_t``.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn qk_circuit_box_duration_expr(
     circuit: *mut CircuitData,
@@ -3460,14 +3464,22 @@ mod test {
     }
 
     #[test]
-    fn test_circuit_box() {
+    fn test_append_box() {
         let circuit = qk_circuit_new(1, 0);
         let body = qk_circuit_new(1, 0);
         let qubits = [0_u32];
 
         let mut box_index = usize::MAX;
-        let exit_code =
-            unsafe { qk_circuit_box(circuit, body, qubits.as_ptr(), ptr::null(), &mut box_index) };
+        let exit_code = unsafe {
+            append_box(
+                circuit,
+                body,
+                qubits.as_ptr(),
+                ptr::null(),
+                None,
+                &mut box_index,
+            )
+        };
         assert_eq!(exit_code, ExitCode::Success);
         assert_eq!(box_index, 0);
 
