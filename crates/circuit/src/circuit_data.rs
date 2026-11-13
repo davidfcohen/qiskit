@@ -486,13 +486,6 @@ impl CircuitData {
         self.blocks.push(block)
     }
 
-    /// Decrement the reference count of a block, removing it if the count is 0.
-    ///
-    /// Returns the removed block's circuit if the refcount is 0.
-    pub fn decrement_block(&mut self, block: Block) -> Option<CircuitData> {
-        self.blocks.decrement(block)
-    }
-
     /// Take the blocks from an extraction from an `OperationFromPython<CircuitData>` and add them
     /// to this circuit.
     ///

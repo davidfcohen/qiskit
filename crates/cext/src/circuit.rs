@@ -2935,7 +2935,6 @@ unsafe fn append_box(
     let params = Some(Parameters::Blocks(vec![box_block]));
 
     if let Err(error) = circuit.push_packed_operation(box_op, params, qargs, cargs) {
-        circuit.decrement_block(box_block);
         error.into()
     } else {
         if !out_inst_idx.is_null() {
